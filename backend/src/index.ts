@@ -1,37 +1,141 @@
 import express from 'express';
 import cors from 'cors';
+import pdfParse from 'pdf-parse';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-
-import { initDb, get, run } from './db';
+import { initDb, run, get, all } from './db';
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3001;
+
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+import os from 'os';
+
 initDb().then(() => console.log('Database initialized'));
 
+const generateExamCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  let prefix = '';
+  for(let i=0; i<5; i++) prefix += chars.charAt(Math.floor(Math.random() * chars.length));
+  let suffix = '';
+  for(let i=0; i<4; i++) suffix += digits.charAt(Math.floor(Math.random() * digits.length));
+  return `${prefix}-${suffix}`;
+};
+
+// Parser logic for MCQs
+function parseQuestions(text: string) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const questions = [];
+  let currentQuestion = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^(Question\s*\d+|Q\d+|\d+\.)/i.test(line)) {
+      if (currentQuestion) questions.push(currentQuestion);
+      currentQuestion = {
+        id: questions.length + 1,
+        question: line,
+        options: {} as Record<string, string>
+      };
+    } else if (currentQuestion) {
+      const optMatch = line.match(/^([A-D])[\.\)]\s*(.*)/i);
+      if (optMatch) {
+        currentQuestion.options[optMatch[1].toUpperCase()] = optMatch[2];
+      } else if (Object.keys(currentQuestion.options).length === 0) {
+        currentQuestion.question += ' ' + line;
+      }
+    }
+  }
+  if (currentQuestion) questions.push(currentQuestion);
+  return questions;
+}
+
+// Stage 7 Parser logic for Answer Key
+function parseAnswerKey(text: string) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const answerKey: Record<string, string> = {};
+  
+  for (let line of lines) {
+    const match = line.match(/^(?:Q)?(\d+)(?:\.|\)|\s|-)*([A-D])/i);
+    if (match) {
+      answerKey[match[1]] = match[2].toUpperCase();
+    }
+  }
+  return answerKey;
+}
 
 
+const generateExamCode = () => {
+  const prefix = Math.random().toString(36).substring(2, 5).toUpperCase();
+  const suffix = Math.random().toString(36).substring(2, 5).toUpperCase();
+  return `${prefix}-${suffix}`;
+};
 
+// Parser logic for MCQs
+function parseQuestions(text: string) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const questions = [];
+  let currentQuestion: any = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^(Question\s*\d+|Q\d+|\d+\.)/i.test(line)) {
+      if (currentQuestion) questions.push(currentQuestion);
+      currentQuestion = {
+        id: (questions.length + 1).toString(),
+        question: line,
+        options: {} as Record<string, string>
+      };
+    } else if (currentQuestion) {
+      const optMatch = line.match(/^([A-D])[\.\)]\s*(.*)/i);
+      if (optMatch) {
+        currentQuestion.options[optMatch[1].toUpperCase()] = optMatch[2];
+      } else if (Object.keys(currentQuestion.options).length === 0) {
+        currentQuestion.question += ' ' + line;
+      }
+    }
+  }
+  if (currentQuestion) questions.push(currentQuestion);
+  return questions;
+}
 
-app.post('/api/exams/create', async (req, res) => {
+// Stage 7 Parser logic for Answer Key
+function parseAnswerKey(text: string) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const answerKey: Record<string, string> = {};
+  
+  for (let line of lines) {
+    const match = line.match(/^(?:Q)?(\d+)(?:\.|\)|\s|-)*([A-D])/i);
+    if (match) {
+      answerKey[match[1]] = match[2].toUpperCase();
+    }
+  }
+  return answerKey;
+}
+
+app.post('/api/exams/create', express.json({ limit: '10mb' }), async (req, res) => {
   try {
-    const { examName, duration, numQuestions, extractedText } = req.body;
-    if (!extractedText) return res.status(400).json({ error: 'Extracted text is required' });
+    const { examName, duration, numQuestions } = req.body;
+    if (!req.body.pdfBase64) return res.status(400).json({ error: 'PDF file is required' });
+    const dataBuffer = Buffer.from(req.body.pdfBase64, 'base64');
+    const data = await pdfParse(dataBuffer);
     
-    const questions = parseQuestions(extractedText);
+    const questions = parseQuestions(data.text);
     const examCode = generateExamCode();
     const adminToken = crypto.randomUUID();
     
-    await run(
-      'INSERT INTO exams (examCode, adminToken, name, duration, numQuestions, questions) VALUES (?, ?, ?, ?, ?, ?)',
-      [examCode, adminToken, examName, duration, numQuestions, JSON.stringify(questions)]
-    );
+    await run(`
+      INSERT INTO exams (examCode, adminToken, name, duration, numQuestions, questions)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [examCode, adminToken, examName, duration || null, questions.length, JSON.stringify(questions)]);
     
-    res.json({ examCode, adminToken });
+    // No disk file to delete
+    
+    res.json({ success: true, examCode, adminToken, questionsParsed: questions.length });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to parse PDF and create exam' });
@@ -113,15 +217,15 @@ app.post('/api/exams/:examCode/upload-key', express.json({ limit: '10mb' }), asy
   try {
     const { examCode } = req.params;
     const { token } = req.body;
-    if (!req.body.pdfBase64) return res.status(400).json({ error: 'PDF file is required' });
+    if (!req.file) return res.status(400).json({ error: 'PDF file is required' });
     
     const exam: any = await get('SELECT id, adminToken FROM exams WHERE examCode = ?', [examCode]);
     if (!exam || exam.adminToken !== token) return res.status(403).json({ error: 'Unauthorized' });
     
-    const dataBuffer = Buffer.from(req.body.pdfBase64, 'base64');
-    const text = await parsePDFBuffer(dataBuffer);
+    const dataBuffer = req.file.buffer;
+    const data = await pdfParse(dataBuffer);
     
-    const parsedKey = parseAnswerKey(text);
+    const parsedKey = parseAnswerKey(data.text);
     
     // We update DB but we don't automatically score yet, or we score immediately?
     // User flow: Upload -> Parse -> Confirm -> Results.
