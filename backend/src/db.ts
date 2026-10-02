@@ -1,33 +1,23 @@
-import sqlite3 from 'sqlite3';
-import { promisify } from 'util';
 
-const db = new sqlite3.Database('./mcq.db');
+import { createClient } from '@libsql/client';
 
-export const run = (sql: string, params: any[] = []) => {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve(this);
-    });
-  });
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL || 'file:./mcq.db',
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+
+export const run = async (sql: string, params: any[] = []) => {
+  return await client.execute({ sql, args: params });
 };
 
-export const get = (sql: string, params: any[] = []) => {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, result) => {
-      if (err) reject(err);
-      else resolve(result);
-    });
-  });
+export const get = async (sql: string, params: any[] = []) => {
+  const result = await client.execute({ sql, args: params });
+  return result.rows[0];
 };
 
-export const all = (sql: string, params: any[] = []) => {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
+export const all = async (sql: string, params: any[] = []) => {
+  const result = await client.execute({ sql, args: params });
+  return result.rows;
 };
 
 export const initDb = async () => {
@@ -39,8 +29,8 @@ export const initDb = async () => {
       duration INTEGER,
       numQuestions INTEGER,
       status TEXT DEFAULT 'OPEN',
-      answerKey JSON,
-      questions JSON,
+      answerKey TEXT,
+      questions TEXT,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -50,7 +40,7 @@ export const initDb = async () => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       examCode TEXT,
       name TEXT,
-      answers JSON,
+      answers TEXT,
       status TEXT DEFAULT 'IN_PROGRESS',
       score INTEGER,
       totalCorrect INTEGER,

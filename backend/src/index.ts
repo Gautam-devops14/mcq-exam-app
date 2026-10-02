@@ -13,7 +13,8 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-const upload = multer({ dest: 'uploads/' });
+import os from 'os';
+const upload = multer({ dest: os.tmpdir() });
 
 initDb().then(() => console.log('Database initialized'));
 
@@ -271,6 +272,11 @@ app.get('*', (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Backend running on http://localhost:${port}`);
-});
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`Backend running on http://localhost:${port}`);
+  });
+}
+export default app;
+
