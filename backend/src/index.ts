@@ -71,9 +71,8 @@ function parseAnswerKey(text: string) {
 app.post('/api/exams/create', upload.single('pdf'), async (req, res) => {
   try {
     const { examName, duration, numQuestions } = req.body;
-    if (!req.file) return res.status(400).json({ error: 'PDF file is required' });
-    
-    const dataBuffer = req.file.buffer;
+    if (!req.body.pdfBase64) return res.status(400).json({ error: 'PDF file is required' });
+    const dataBuffer = Buffer.from(req.body.pdfBase64, 'base64');
     const data = await pdfParse(dataBuffer);
     
     const questions = parseQuestions(data.text);
