@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 import os from 'os';
-const upload = multer({ dest: os.tmpdir() });
+const upload = multer({ storage: multer.memoryStorage() });
 
 initDb().then(() => console.log('Database initialized'));
 
@@ -75,7 +75,7 @@ app.post('/api/exams/create', upload.single('pdf'), async (req, res) => {
     const { examName, duration, numQuestions } = req.body;
     if (!req.file) return res.status(400).json({ error: 'PDF file is required' });
     
-    const dataBuffer = fs.readFileSync(req.file.path);
+    const dataBuffer = req.file.buffer;
     const data = await pdfParse(dataBuffer);
     
     const questions = parseQuestions(data.text);
@@ -87,7 +87,7 @@ app.post('/api/exams/create', upload.single('pdf'), async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?)
     `, [examCode, adminToken, examName, duration || null, questions.length, JSON.stringify(questions)]);
     
-    fs.unlinkSync(req.file.path);
+    // No disk file to delete
     
     res.json({ success: true, examCode, adminToken, questionsParsed: questions.length });
   } catch (error) {
@@ -176,7 +176,7 @@ app.post('/api/exams/:examCode/upload-key', upload.single('pdf'), async (req, re
     const exam: any = await get('SELECT id, adminToken FROM exams WHERE examCode = ?', [examCode]);
     if (!exam || exam.adminToken !== token) return res.status(403).json({ error: 'Unauthorized' });
     
-    const dataBuffer = fs.readFileSync(req.file.path);
+    const dataBuffer = req.file.buffer;
     const data = await pdfParse(dataBuffer);
     
     const parsedKey = parseAnswerKey(data.text);
@@ -185,7 +185,7 @@ app.post('/api/exams/:examCode/upload-key', upload.single('pdf'), async (req, re
     // User flow: Upload -> Parse -> Confirm -> Results.
     // For MVP, we will return the parsed key so organizer can confirm.
     
-    fs.unlinkSync(req.file.path);
+    // No disk file to delete
     
     res.json({ success: true, parsedKey });
   } catch (error) {
