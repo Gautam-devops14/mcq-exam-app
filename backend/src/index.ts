@@ -4,7 +4,7 @@ import multer from 'multer';
 import pdfParse from 'pdf-parse';
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { initDb, run, get, all } from './db';
 
 const app = express();
@@ -80,7 +80,7 @@ app.post('/api/exams/create', upload.single('pdf'), async (req, res) => {
     
     const questions = parseQuestions(data.text);
     const examCode = generateExamCode();
-    const adminToken = uuidv4();
+    const adminToken = crypto.randomUUID();
     
     await run(`
       INSERT INTO exams (examCode, adminToken, name, duration, numQuestions, questions)
