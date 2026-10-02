@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
-const pdfParse = require('pdf-parse');
+import pdfParse from 'pdf-parse';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';

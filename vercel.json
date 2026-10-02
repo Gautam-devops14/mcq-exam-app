@@ -19,8 +19,12 @@
       "destination": "/backend/src/index.ts"
     },
     {
+      "source": "/assets/(.*)",
+      "destination": "/frontend/assets/$1"
+    },
+    {
       "source": "/(.*)",
-      "destination": "/frontend/$1"
+      "destination": "/frontend/index.html"
     }
   ]
 }
