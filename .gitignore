@@ -1,0 +1,5 @@
+node_modules/
+dist/
+mcq.db
+uploads/
+.env
