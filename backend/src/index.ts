@@ -1,22 +1,19 @@
 import express from 'express';
 import cors from 'cors';
-const PDFParser = require('pdf2json');
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
+import { initDb, get, run } from './db';
 
-async function parsePDFBuffer(buffer: Buffer): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const pdfParser = new PDFParser(this, 1);
-    pdfParser.on("pdfParser_dataError", (errData: any) => reject(errData.parserError));
-    pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
-        resolve(pdfParser.getRawTextContent());
-    });
-    pdfParser.parseBuffer(buffer);
-  });
-}
-);
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+
+initDb().then(() => console.log('Database initialized'));
+
+
+
 
 app.get('/api/exams/:examCode', async (req, res) => {
   try {
