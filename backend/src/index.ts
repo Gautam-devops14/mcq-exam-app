@@ -1,9 +1,21 @@
 import express from 'express';
 import cors from 'cors';
-import pdfParse from 'pdf-parse';
+const { PdfReader } = require('pdfreader');
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+
+async function parsePDFBuffer(buffer: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let text = '';
+    new PdfReader().parseBuffer(buffer, (err: any, item: any) => {
+      if (err) reject(err);
+      else if (!item) resolve(text);
+      else if (item.text) text += item.text + '\n';
+    });
+  });
+}
+
 import { initDb, run, get, all } from './db';
 
 const app = express();
