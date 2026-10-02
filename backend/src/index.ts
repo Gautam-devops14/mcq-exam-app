@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
-import { PDFParse } from 'pdf-parse';
+const pdfParse = require('pdf-parse');
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -76,8 +76,7 @@ app.post('/api/exams/create', upload.single('pdf'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'PDF file is required' });
     
     const dataBuffer = fs.readFileSync(req.file.path);
-    const parser = new PDFParse({ data: dataBuffer });
-    const data = await parser.getText();
+    const data = await pdfParse(dataBuffer);
     
     const questions = parseQuestions(data.text);
     const examCode = generateExamCode();
@@ -178,8 +177,7 @@ app.post('/api/exams/:examCode/upload-key', upload.single('pdf'), async (req, re
     if (!exam || exam.adminToken !== token) return res.status(403).json({ error: 'Unauthorized' });
     
     const dataBuffer = fs.readFileSync(req.file.path);
-    const parser = new PDFParse({ data: dataBuffer });
-    const data = await parser.getText();
+    const data = await pdfParse(dataBuffer);
     
     const parsedKey = parseAnswerKey(data.text);
     

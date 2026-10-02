@@ -16,7 +16,7 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "multer": "^2.4.0",
-    "pdf-parse": "^2.4.5",
+    "pdf-parse": "^1.1.1",
     "uuid": "^14.0.2"
   },
   "devDependencies": {
