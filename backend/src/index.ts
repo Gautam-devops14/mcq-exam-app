@@ -261,14 +261,7 @@ app.get('/api/exams/:examCode/result', async (req, res) => {
 });
 
 
-// Serve frontend static files in production
-const frontendDist = path.join(__dirname, '../../frontend/dist');
-app.use(express.static(frontendDist));
-app.get('*', (req, res) => {
-  if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(frontendDist, 'index.html'));
-  }
-});
+
 
 
 if (process.env.NODE_ENV !== 'production') {
