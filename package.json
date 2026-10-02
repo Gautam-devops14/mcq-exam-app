@@ -16,7 +16,6 @@
     "express": "^5.2.1",
     "multer": "^2.4.0",
     "pdf2json": "^4.1.0",
-    "pdfkit": "^0.20.2",
-    "pdfreader": "^3.0.8"
+    "pdfkit": "^0.20.2"
   }
 }
