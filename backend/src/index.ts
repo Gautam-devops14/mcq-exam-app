@@ -68,7 +68,7 @@ function parseAnswerKey(text: string) {
   return answerKey;
 }
 
-app.post('/api/exams/create', upload.single('pdf'), async (req, res) => {
+app.post('/api/exams/create', express.json({ limit: '10mb' }), async (req, res) => {
   try {
     const { examName, duration, numQuestions } = req.body;
     if (!req.body.pdfBase64) return res.status(400).json({ error: 'PDF file is required' });
@@ -164,7 +164,7 @@ app.get('/api/exams/:examCode/organizer', async (req, res) => {
   }
 });
 
-app.post('/api/exams/:examCode/upload-key', upload.single('pdf'), async (req, res) => {
+app.post('/api/exams/:examCode/upload-key', express.json({ limit: '10mb' }), async (req, res) => {
   try {
     const { examCode } = req.params;
     const { token } = req.body;
