@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import pdfParse from 'pdf-parse';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -18,12 +17,10 @@ initDb().then(() => console.log('Database initialized'));
 
 app.post('/api/exams/create', express.json({ limit: '10mb' }), async (req, res) => {
   try {
-    const { examName, duration, numQuestions } = req.body;
-    if (!req.body.pdfBase64) return res.status(400).json({ error: 'PDF file is required' });
-    const dataBuffer = Buffer.from(req.body.pdfBase64, 'base64');
-    const data = await pdfParse(dataBuffer);
+    const { examName, duration, numQuestions, extractedText } = req.body;
+    if (!extractedText) return res.status(400).json({ error: 'Extracted text is required' });
     
-    const questions = parseQuestions(data.text);
+    const questions = parseQuestions(extractedText);
     const examCode = generateExamCode();
     const adminToken = crypto.randomUUID();
     
@@ -122,9 +119,8 @@ app.post('/api/exams/:examCode/upload-key', express.json({ limit: '10mb' }), asy
     if (!exam || exam.adminToken !== token) return res.status(403).json({ error: 'Unauthorized' });
     
     const dataBuffer = req.file.buffer;
-    const data = await pdfParse(dataBuffer);
     
-    const parsedKey = parseAnswerKey(data.text);
+    const parsedKey = parseAnswerKey(req.body.extractedText);
     
     // We update DB but we don't automatically score yet, or we score immediately?
     // User flow: Upload -> Parse -> Confirm -> Results.
