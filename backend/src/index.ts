@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { initDb, get, run } from './db';
 
 const app = express();
+const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
