@@ -1,8 +1,11 @@
 import app from '../backend/src/index';
 
+// We WANT body parsing for JSON payloads!
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
   },
 };
 

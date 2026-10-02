@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import multer from 'multer';
 import pdfParse from 'pdf-parse';
 import fs from 'fs';
 import path from 'path';
@@ -14,7 +13,6 @@ app.use(cors());
 app.use(express.json());
 
 import os from 'os';
-const upload = multer({ storage: multer.memoryStorage() });
 
 initDb().then(() => console.log('Database initialized'));
 
