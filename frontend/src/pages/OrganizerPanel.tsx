@@ -1,3 +1,4 @@
+import { extractTextFromPDF } from '../utils/pdfExtractor';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 

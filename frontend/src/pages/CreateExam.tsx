@@ -1,3 +1,4 @@
+import { extractTextFromPDF } from '../utils/pdfExtractor';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
